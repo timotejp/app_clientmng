@@ -54,6 +54,10 @@
       "icon": "assets/icon.ico"
     }
   },
+  "engines": {
+    "node": ">=18",
+    "npm": ">=11.6.2 <12"
+  },
   "browserslist": {
     "production": [
       ">0.2%",
