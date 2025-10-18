@@ -18,7 +18,7 @@ import {
 } from 'react-native-paper';
 import { useTheme } from 'react-native-paper';
 import { StorageService } from '../services/StorageService';
-import NetInfo from '@react-native-netinfo/netinfo';
+import NetInfo from 'react-native-netinfo';
 
 const SettingsScreen = () => {
   const theme = useTheme();

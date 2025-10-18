@@ -18,7 +18,7 @@ import {
 import { useTheme } from 'react-native-paper';
 import { ApiService } from '../services/ApiService';
 import { StorageService } from '../services/StorageService';
-import NetInfo from '@react-native-netinfo/netinfo';
+import NetInfo from 'react-native-netinfo';
 
 const HomeScreen = ({ navigation }) => {
   const theme = useTheme();
