@@ -9,14 +9,16 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, 'maintenance.db');
+const UPLOAD_PATH = process.env.UPLOAD_PATH || path.resolve(__dirname, 'uploads');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(UPLOAD_PATH));
 
 // Database setup
-const db = new sqlite3.Database('maintenance.db');
+const db = new sqlite3.Database(DB_PATH);
 
 // Initialize database tables
 db.serialize(() => {
@@ -90,11 +92,10 @@ db.serialize(() => {
 // File upload configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = 'uploads/';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    if (!fs.existsSync(UPLOAD_PATH)) {
+      fs.mkdirSync(UPLOAD_PATH, { recursive: true });
     }
-    cb(null, uploadDir);
+    cb(null, UPLOAD_PATH);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -105,15 +106,20 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Email configuration (configure with your SMTP settings)
-const transporter = nodemailer.createTransporter({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: process.env.SMTP_PORT || 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-});
+let transporter = null;
+if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+} else {
+  console.warn('SMTP credentials not provided. Email reminders are disabled.');
+}
 
 // API Routes
 
@@ -329,7 +335,7 @@ app.post('/api/nalogi/:id/slike', upload.array('slike', 10), (req, res) => {
     return new Promise((resolve, reject) => {
       db.run(
         'INSERT INTO slike (nalog_id, ime_datoteke, pot) VALUES (?, ?, ?)',
-        [nalogId, file.originalname, file.filename],
+        [nalogId, file.originalname, path.basename(file.path)],
         function(err) {
           if (err) reject(err);
           else resolve(this.lastID);
@@ -362,6 +368,10 @@ app.get('/api/nalogi/:id/slike', (req, res) => {
 // Cron job for maintenance reminders (runs daily at 9 AM)
 cron.schedule('0 9 * * *', () => {
   console.log('Checking for maintenance reminders...');
+  if (!transporter) {
+    console.log('Email transporter not configured. Skipping reminders.');
+    return;
+  }
   
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);

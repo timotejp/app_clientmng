@@ -1,12 +1,12 @@
-# Navodila za namestitev na Proxmox
+# Navodila za namestitev na Proxmox (Ubuntu 24.04 LTS)
 
-Ta dokument opisuje, kako namestiti sistem za upravljanje vzdrževanja na vaš Proxmox strežnik.
+Ta dokument opisuje, kako namestiti sistem za upravljanje vzdrževanja na vaš Proxmox strežnik z Ubuntu 24.04 LTS.
 
 ## Predpogoji
 
-- Proxmox strežnik z dostopom do interneta
-- Node.js (verzija 16 ali novejša)
-- npm ali yarn
+- Proxmox strežnik z Ubuntu 24.04 LTS
+- Node.js (verzija 20 LTS ali novejša)
+- npm (verzija 11.6.2 ali novejša)
 - Git
 
 ## 1. Priprava Proxmox strežnika
@@ -17,13 +17,16 @@ Ta dokument opisuje, kako namestiti sistem za upravljanje vzdrževanja na vaš P
 # Posodobite sistem
 apt update && apt upgrade -y
 
-# Namestite Node.js
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Namestite Node.js 20 LTS (priporočeno za Ubuntu 24.04)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 apt-get install -y nodejs
 
 # Preverite namestitev
-node --version
-npm --version
+node --version  # mora biti v20.x.x
+npm --version   # mora biti v11.6.2 ali novejša
+
+# Namestite build tools za native moduli
+apt-get install -y build-essential python3
 ```
 
 ### Namestitev Git
@@ -71,11 +74,12 @@ nano .env
 ```env
 # Server Configuration
 PORT=3001
+NODE_ENV=production
 
 # Database
 DB_PATH=/opt/maintenance-manager/server/maintenance.db
 
-# Email Configuration
+# Email Configuration (opcijsko - za opozorila)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
@@ -120,6 +124,12 @@ ExecStart=/usr/bin/node index.js
 Restart=always
 RestartSec=10
 Environment=NODE_ENV=production
+Environment=PORT=3001
+Environment=DB_PATH=/opt/maintenance-manager/server/maintenance.db
+Environment=UPLOAD_PATH=/opt/maintenance-manager/server/uploads
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=maintenance-manager
 
 [Install]
 WantedBy=multi-user.target
